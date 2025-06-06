@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Task } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskForm } from './components/TaskForm';
+import { TaskFilters } from './components/TaskFilters';
 import { CheckCircle2, ListTodo } from 'lucide-react';
 
 function App() {
@@ -9,6 +10,10 @@ function App() {
     const savedTasks = localStorage.getItem('tasks');
     return savedTasks ? JSON.parse(savedTasks) : [];
   });
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -65,11 +70,26 @@ function App() {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
-  const handleEditTask = (editedTask: Task) => {
+  const handleStartEdit = (task: Task) => {
+    setEditingTask(task);
+  };
+
+  const handleUpdateTask = (editedTask: Task) => {
     setTasks((prev) =>
       prev.map((task) => (task.id === editedTask.id ? editedTask : task))
     );
+    setEditingTask(null);
   };
+
+  const handleCancelEdit = () => setEditingTask(null);
+
+  const filteredTasks = tasks.filter((task) => {
+    if (statusFilter === 'active' && task.completed) return false;
+    if (statusFilter === 'completed' && !task.completed) return false;
+    if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+    if (searchQuery.trim() && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div 
@@ -95,16 +115,29 @@ function App() {
                 </span>
               </div>
             </div>
-            <TaskForm onAddTask={handleAddTask} />
-          </div>
+          <TaskForm
+            onAddTask={handleAddTask}
+            editingTask={editingTask}
+            onUpdateTask={handleUpdateTask}
+            onCancelEdit={handleCancelEdit}
+          />
+          <TaskFilters
+            statusFilter={statusFilter}
+            priorityFilter={priorityFilter}
+            searchQuery={searchQuery}
+            onStatusChange={setStatusFilter}
+            onPriorityChange={setPriorityFilter}
+            onSearchChange={setSearchQuery}
+          />
+        </div>
 
-          <div className="space-y-6">
-            <TaskList
-              tasks={tasks}
-              onToggleComplete={handleToggleComplete}
-              onDeleteTask={handleDeleteTask}
-              onEditTask={handleEditTask}
-            />
+        <div className="space-y-6">
+          <TaskList
+            tasks={filteredTasks}
+            onToggleComplete={handleToggleComplete}
+            onDeleteTask={handleDeleteTask}
+            onEditTask={handleStartEdit}
+          />
           </div>
         </div>
       </div>

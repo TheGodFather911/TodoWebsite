@@ -1,28 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task } from '../types';
-import { Plus, Calendar } from 'lucide-react';
+import { Plus, Calendar, Check, X } from 'lucide-react';
 
 interface TaskFormProps {
   onAddTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  editingTask?: Task | null;
+  onUpdateTask?: (task: Task) => void;
+  onCancelEdit?: () => void;
 }
 
-export function TaskForm({ onAddTask }: TaskFormProps) {
+export function TaskForm({
+  onAddTask,
+  editingTask,
+  onUpdateTask,
+  onCancelEdit,
+}: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
 
+  useEffect(() => {
+    if (editingTask) {
+      setTitle(editingTask.title);
+      setDescription(editingTask.description ?? '');
+      setDueDate(
+        editingTask.dueDate
+          ? new Date(editingTask.dueDate).toISOString().slice(0, 16)
+          : ''
+      );
+      setPriority(editingTask.priority);
+    } else {
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+      setPriority('medium');
+    }
+  }, [editingTask]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    onAddTask({
-      title: title.trim(),
-      description: description.trim(),
-      completed: false,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      priority,
-    });
+    if (editingTask && onUpdateTask) {
+      onUpdateTask({
+        ...editingTask,
+        title: title.trim(),
+        description: description.trim(),
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        priority,
+      });
+    } else {
+      onAddTask({
+        title: title.trim(),
+        description: description.trim(),
+        completed: false,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        priority,
+      });
+    }
 
     setTitle('');
     setDescription('');
@@ -72,13 +108,34 @@ export function TaskForm({ onAddTask }: TaskFormProps) {
             <option value="high">High Priority</option>
           </select>
         </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Task</span>
-        </button>
+        <div className="flex space-x-2">
+          <button
+            type="submit"
+            className="flex-1 bg-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+          >
+            {editingTask ? (
+              <>
+                <Check className="w-5 h-5" />
+                <span>Save Task</span>
+              </>
+            ) : (
+              <>
+                <Plus className="w-5 h-5" />
+                <span>Add Task</span>
+              </>
+            )}
+          </button>
+          {editingTask && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 flex items-center justify-center space-x-2 hover:bg-gray-50 transition-colors"
+            >
+              <X className="w-5 h-5" />
+              <span>Cancel</span>
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );
