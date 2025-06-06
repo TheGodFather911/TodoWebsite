@@ -41,7 +41,17 @@ export function useTasks(userId: string | undefined) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasks(data || []);
+      setTasks(
+        (data || []).map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description ?? undefined,
+          completed: t.completed,
+          dueDate: t.due_date ? new Date(t.due_date) : undefined,
+          priority: t.priority as Task['priority'],
+          createdAt: new Date(t.created_at),
+        }))
+      );
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
@@ -53,7 +63,11 @@ export function useTasks(userId: string | undefined) {
     try {
       const { error } = await supabase.from('tasks').insert([
         {
-          ...newTask,
+          title: newTask.title,
+          description: newTask.description ?? null,
+          completed: newTask.completed,
+          due_date: newTask.dueDate ? newTask.dueDate.toISOString() : null,
+          priority: newTask.priority,
           user_id: userId,
         },
       ]);
@@ -68,7 +82,13 @@ export function useTasks(userId: string | undefined) {
     try {
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update({
+          title: updates.title,
+          description: updates.description ?? null,
+          completed: updates.completed,
+          due_date: updates.dueDate ? updates.dueDate.toISOString() : null,
+          priority: updates.priority,
+        })
         .eq('id', taskId)
         .eq('user_id', userId);
       if (error) throw error;
